@@ -60,11 +60,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             Task { @MainActor in await self?.fetch() }
         }
 
-        if let board = Board.load() {
+        if let board = Self.boardFromLaunchArguments() {
+            if board.host != Board.load()?.host { Honeycomb.forgetTokens() }
+            board.save()
+            use(board)
+        } else if let board = Board.load() {
             use(board)
         } else {
             askForBoard()
         }
+    }
+
+    private static func boardFromLaunchArguments() -> Board? {
+        let arguments = CommandLine.arguments
+        guard let flag = arguments.firstIndex(of: "--board"), flag + 1 < arguments.count else { return nil }
+        return Board.parse(arguments[flag + 1])
     }
 
     private func use(_ board: Board) {

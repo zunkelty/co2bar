@@ -18,17 +18,16 @@ It reads the newest CO₂ value every minute.
 
 ## Install with an agent
 
-Give this prompt to Claude Code or another coding agent:
+Replace `<BOARD_URL>` with the link to your Honeycomb board. Then give the prompt to Claude Code or another coding agent:
 
 ```text
-Install the CO2 Bar menu bar app from https://github.com/zunkelty/co2bar on this Mac.
+Install the CO2 Bar menu bar app from https://github.com/zunkelty/co2bar on this Mac. Use this Honeycomb board: <BOARD_URL>
 
 1. Run `xcode-select -p`. If it fails, run `xcode-select --install`, ask me to finish the installer, and wait until `xcode-select -p` succeeds.
 2. If ~/co2bar exists, run `git -C ~/co2bar pull`. If not, run `git clone https://github.com/zunkelty/co2bar.git ~/co2bar`.
-3. Run `~/co2bar/build.sh install`. This builds the app, copies it to ~/Applications/CO2Bar.app and starts it.
-4. Tell me that the app shows a window that asks for a Honeycomb board link. I must paste the link to our CO₂ board and click Save. Do not ask me for the link yourself.
-5. Tell me that a Honeycomb sign-in tab then opens in my browser and that I must approve it. Wait until `security find-generic-password -s com.github.zunkelty.co2bar -a honeycomb-mcp` succeeds. That means the sign-in is done.
-6. Tell me to check that the menu bar shows a CO₂ value in ppm. Tell me to click it and turn on "Launch at Login".
+3. Run `~/co2bar/build.sh install "<BOARD_URL>"`. This builds the app, copies it to ~/Applications/CO2Bar.app, saves the board in the Keychain and starts the app.
+4. Tell me that a Honeycomb sign-in tab opens in my browser and that I must approve it. Wait until `security find-generic-password -s com.github.zunkelty.co2bar -a honeycomb-mcp` succeeds. That means the sign-in is done.
+5. Tell me to check that the menu bar shows a CO₂ value in ppm. Tell me to click it and turn on "Launch at Login".
 
 If a step fails, show me the error and stop.
 ```
@@ -37,16 +36,16 @@ If a step fails, show me the error and stop.
 
 ```sh
 git clone https://github.com/zunkelty/co2bar.git ~/co2bar
-~/co2bar/build.sh install
+~/co2bar/build.sh install "<BOARD_URL>"
 ```
 
-1. Paste the board link in the window that opens, and click **Save**.
+1. If you leave out the board link, paste it in the window that opens, and click **Save**.
 2. Approve the Honeycomb sign-in in your browser.
 3. Click the value in the menu bar and turn on **Launch at Login**.
 
 To update, run `git -C ~/co2bar pull && ~/co2bar/build.sh install`. After an update, macOS can ask once if CO2 Bar can use its Keychain items. Click **Always Allow**.
 
-To use a different board, click **Change Board…** in the menu.
+To use a different board, click **Change Board…** in the menu, or run `~/co2bar/build.sh install \"<BOARD_URL>\"` again.
 
 ## Uninstall
 

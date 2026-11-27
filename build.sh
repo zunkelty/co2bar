@@ -2,6 +2,21 @@
 set -eu
 cd "$(dirname "$0")"
 
+usage() {
+    echo "Usage: $0 [install [<honeycomb-board-url>]]" >&2
+    exit 1
+}
+
+BOARD_URL="${2:-}"
+case "${1:-}" in
+    "" | install) ;;
+    *) usage ;;
+esac
+case "$BOARD_URL" in
+    "" | https://ui.*honeycomb.io/*/environments/*/board/*) ;;
+    *) echo "Not a Honeycomb board URL: $BOARD_URL" >&2; usage ;;
+esac
+
 if ! command -v swiftc >/dev/null 2>&1; then
     echo "swiftc not found. Install the Xcode Command Line Tools with: xcode-select --install" >&2
     exit 1
@@ -19,6 +34,10 @@ if [ "${1:-}" = "install" ]; then
     pkill -x CO2Bar || true
     rm -rf "$HOME/Applications/CO2Bar.app"
     cp -R "$APP" "$HOME/Applications/"
-    open "$HOME/Applications/CO2Bar.app"
+    if [ -n "$BOARD_URL" ]; then
+        open "$HOME/Applications/CO2Bar.app" --args --board "$BOARD_URL"
+    else
+        open "$HOME/Applications/CO2Bar.app"
+    fi
     echo "Installed to ~/Applications/CO2Bar.app"
 fi
