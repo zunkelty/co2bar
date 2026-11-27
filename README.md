@@ -45,7 +45,7 @@ git clone https://github.com/zunkelty/co2bar.git ~/co2bar
 
 To update, run `git -C ~/co2bar pull && ~/co2bar/build.sh install`. After an update, macOS can ask once if CO2 Bar can use its Keychain items. Click **Always Allow**.
 
-To use a different board, click **Change Board…** in the menu, or run `~/co2bar/build.sh install \"<BOARD_URL>\"` again.
+To use a different board, click **Change Board…** in the menu, or run `~/co2bar/build.sh install "<BOARD_URL>"` again.
 
 ## Uninstall
 
