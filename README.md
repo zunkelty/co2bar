@@ -2,7 +2,7 @@
 
 A macOS menu bar app that shows the current CO₂ level from a Honeycomb board, e.g. **● 1024 ppm**.
 
-It reads the newest CO₂ value every minute.
+It shows each new reading within a few seconds of it reaching Honeycomb.
 
 - **Green:** below 750 ppm.
 - **Amber:** 750 to 1000 ppm.
@@ -62,6 +62,6 @@ rm -rf ~/Applications/CO2Bar.app ~/co2bar
 1. The board link gives the Honeycomb region, environment and board ID.
 2. The app signs in to the Honeycomb MCP server for that region (`mcp.honeycomb.io` or `mcp.eu1.honeycomb.io`) with OAuth in your browser. It does not need an API key.
 3. It finds the first query on the board with "CO2" in its name, and gets the dataset and the CO₂ column from that query.
-4. Each minute it uses the `run_query` tool to get that column's values from the last 10 minutes, and it shows the newest one.
+4. It uses the `run_query` tool to get that column's values from the last 10 minutes, and it shows the newest one. From the gaps between readings it knows when the next one is due. It then polls every 3 seconds until the new reading arrives, for at most 25 seconds, and every 15 seconds after that.
 
 The app saves the board link, the sign-in token, the dataset and the column in your Keychain.
