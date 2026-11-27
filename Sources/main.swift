@@ -42,8 +42,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var state = DisplayState.loading
     private var lastReading: Reading?
+    private var readingPeriod = Config.defaultReadingPeriod
     private var isFetching = false
-    private var timer: Timer?
+    private var pollTask: Task<Void, Never>?
+    private let pollingActivity = ProcessInfo.processInfo.beginActivity(
+        options: .userInitiatedAllowingIdleSystemSleep,
+        reason: "App Nap would delay polls by minutes, leaving the CO₂ value outdated"
+    )
 
     private var isSignedIn: Bool { honeycomb?.isSignedIn ?? false }
 
@@ -53,11 +58,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.menu = menu
         render()
 
-        timer = Timer.scheduledTimer(withTimeInterval: Config.pollInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in await self?.fetch() }
-        }
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor in await self?.fetch() }
+            Task { @MainActor in self?.restartPolling() }
         }
 
         if let board = Self.boardFromLaunchArguments() {
@@ -80,8 +82,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func use(_ board: Board) {
         honeycomb = Honeycomb(board: board)
         lastReading = nil
-        Task {
-            if isSignedIn { await fetch() } else { await signIn() }
+        readingPeriod = Config.defaultReadingPeriod
+        if isSignedIn {
+            restartPolling()
+        } else {
+            Task { await signIn() }
         }
     }
 
@@ -121,27 +126,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func fetch() async {
-        guard let honeycomb else { return }
+    private func restartPolling() {
+        pollTask?.cancel()
+        pollTask = Task {
+            while !Task.isCancelled, await fetch() {
+                try? await Task.sleep(for: .seconds(nextPollDelay()))
+            }
+        }
+    }
+
+    // A reading becomes queryable 3–15 s after its timestamp, so poll quickly only in that window.
+    private func nextPollDelay() -> TimeInterval {
+        guard let lastReading else { return Config.fallbackPollInterval }
+        let due = lastReading.time.addingTimeInterval(readingPeriod)
+        let untilDue = due.timeIntervalSinceNow
+        if untilDue > 0 { return untilDue }
+        if untilDue > -Config.burstWindow { return Config.burstPollInterval }
+        return Config.fallbackPollInterval
+    }
+
+    /// Returns false when polling should stop because there is no signed-in board.
+    private func fetch() async -> Bool {
+        guard let honeycomb else { return false }
         guard honeycomb.isSignedIn else {
-            if case .signingIn = state { return }
+            if case .signingIn = state { return false }
             state = .signedOut
             render()
-            return
+            return false
         }
-        guard !isFetching else { return }
+        guard !isFetching else { return true }
         isFetching = true
         defer { isFetching = false }
         do {
-            let reading = try await honeycomb.latestCO2()
-            lastReading = reading
-            state = .reading(reading)
+            let snapshot = try await honeycomb.latestCO2()
+            lastReading = snapshot.latest
+            readingPeriod = snapshot.readingPeriod ?? readingPeriod
+            state = .reading(snapshot.latest)
         } catch HoneycombError.signedOut {
             state = .signedOut
+            render()
+            return false
         } catch {
             state = .failed(error.localizedDescription, last: lastReading)
         }
         render()
+        return true
     }
 
     @objc private func signInFromMenu() {
@@ -154,7 +183,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         render()
         do {
             try await honeycomb.signIn()
-            await fetch()
+            restartPolling()
         } catch {
             state = .failed("Sign-in failed: \(error.localizedDescription)", last: lastReading)
             render()
@@ -162,6 +191,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func signOut() {
+        pollTask?.cancel()
         honeycomb?.signOut()
         lastReading = nil
         state = .signedOut
@@ -169,7 +199,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func refreshNow() {
-        Task { await fetch() }
+        restartPolling()
     }
 
     @objc private func openBoard() {

@@ -7,7 +7,10 @@ enum Config {
     static let callbackPort: UInt16 = 53682
     static var redirectURI: String { "http://127.0.0.1:\(callbackPort)/callback" }
 
-    static let pollInterval: TimeInterval = 60
+    static let defaultReadingPeriod: TimeInterval = 60
+    static let burstWindow: TimeInterval = 25
+    static let burstPollInterval: TimeInterval = 3
+    static let fallbackPollInterval: TimeInterval = 15
     static let staleAfter: TimeInterval = 5 * 60
 
     static let fairFrom = 750

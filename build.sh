@@ -32,6 +32,7 @@ codesign --force --sign - "$APP"
 if [ "${1:-}" = "install" ]; then
     mkdir -p "$HOME/Applications"
     pkill -x CO2Bar || true
+    while pgrep -x CO2Bar >/dev/null; do sleep 0.2; done
     rm -rf "$HOME/Applications/CO2Bar.app"
     cp -R "$APP" "$HOME/Applications/"
     if [ -n "$BOARD_URL" ]; then

@@ -22,6 +22,7 @@ final class MCPClient {
     private static let protocolVersion = "2025-06-18"
     private let endpoint: URL
     private var sessionID: String?
+    private var isInitialized = false
     private var nextRequestID = 1
 
     init(endpoint: URL) {
@@ -32,17 +33,21 @@ final class MCPClient {
         do {
             return try await callToolInSession(name, arguments: arguments, accessToken: accessToken)
         } catch MCPError.sessionExpired {
-            sessionID = nil
+            reset()
             return try await callToolInSession(name, arguments: arguments, accessToken: accessToken)
         }
     }
 
     func reset() {
         sessionID = nil
+        isInitialized = false
     }
 
     private func callToolInSession(_ name: String, arguments: [String: Any], accessToken: String) async throws -> String {
-        if sessionID == nil { try await initialize(accessToken: accessToken) }
+        if !isInitialized {
+            try await initialize(accessToken: accessToken)
+            isInitialized = true
+        }
         let result = try await request("tools/call", params: ["name": name, "arguments": arguments], accessToken: accessToken)
         let text = ((result["content"] as? [[String: Any]]) ?? []).compactMap { $0["text"] as? String }.joined(separator: "\n")
         if result["isError"] as? Bool == true { throw MCPError.tool(text) }

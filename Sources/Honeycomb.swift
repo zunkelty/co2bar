@@ -5,6 +5,11 @@ struct Reading {
     let time: Date
 }
 
+struct CO2Snapshot {
+    let latest: Reading
+    let readingPeriod: TimeInterval?
+}
+
 enum HoneycombError: LocalizedError {
     case signedOut
     case noRecentReading
@@ -46,7 +51,7 @@ final class Honeycomb {
         Keychain.delete(account: tokensAccount)
     }
 
-    func latestCO2() async throws -> Reading {
+    func latestCO2() async throws -> CO2Snapshot {
         let (dataset, column) = try await co2Source()
         let text = try await callTool("run_query", [
             "environment_slug": board.environment,
@@ -55,8 +60,9 @@ final class Honeycomb {
             "raw_row_columns": [column],
             "results_limit": 30,
         ])
-        guard let reading = Self.latestReading(inRawRows: text) else { throw HoneycombError.noRecentReading }
-        return reading
+        let readings = Self.readings(inRawRows: text)
+        guard let latest = readings.last else { throw HoneycombError.noRecentReading }
+        return CO2Snapshot(latest: latest, readingPeriod: Self.typicalGap(between: readings))
     }
 
     private func co2Source() async throws -> (dataset: String, column: String) {
@@ -121,11 +127,19 @@ extension Honeycomb {
     }
 
     // Raw rows come back as `| <column> | timestamp |` in no particular order.
-    static func latestReading(inRawRows markdown: String) -> Reading? {
+    static func readings(inRawRows markdown: String) -> [Reading] {
         tableRows(markdown).compactMap { cells -> Reading? in
             guard cells.count == 2, let ppm = Double(cells[0]), let time = parseTimestamp(cells[1]) else { return nil }
             return Reading(ppm: Int(ppm.rounded()), time: time)
-        }.max { $0.time < $1.time }
+        }.sorted { $0.time < $1.time }
+    }
+
+    static func typicalGap(between readings: [Reading]) -> TimeInterval? {
+        let gaps = zip(readings, readings.dropFirst())
+            .map { $1.time.timeIntervalSince($0.time) }
+            .filter { $0 > 0 }
+            .sorted()
+        return gaps.isEmpty ? nil : gaps[gaps.count / 2]
     }
 
     private static func columns(in spec: [String: Any]) -> [String] {
