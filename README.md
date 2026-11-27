@@ -14,7 +14,7 @@ It reads the newest CO₂ value every minute.
 - macOS 13 or later.
 - A Honeycomb account that can see a board with a CO₂ query. For example, a board name like "CO2 (ppm)" with a query on a column like `co2_ppm`.
 - The link to that board. Ask your team for it. The app keeps it in your Keychain, not in this repo.
-- The Xcode Command Line Tools. The app is built on your Mac, so you need no Apple developer account and get no Gatekeeper warnings.
+- The Xcode Command Line Tools (`swiftc`). The app is built on your Mac, so you need no Apple developer account and get no Gatekeeper warnings.
 
 ## Install with an agent
 
@@ -23,11 +23,10 @@ Replace `<BOARD_URL>` with the link to your Honeycomb board. Then give the promp
 ```text
 Install the CO2 Bar menu bar app from https://github.com/zunkelty/co2bar on this Mac. Use this Honeycomb board: <BOARD_URL>
 
-1. Run `xcode-select -p`. If it fails, run `xcode-select --install`, ask me to finish the installer, and wait until `xcode-select -p` succeeds.
-2. If ~/co2bar exists, run `git -C ~/co2bar pull`. If not, run `git clone https://github.com/zunkelty/co2bar.git ~/co2bar`.
-3. Run `~/co2bar/build.sh install "<BOARD_URL>"`. This builds the app, copies it to ~/Applications/CO2Bar.app, saves the board in the Keychain and starts the app.
-4. Tell me that a Honeycomb sign-in tab opens in my browser and that I must approve it. Wait until `security find-generic-password -s com.github.zunkelty.co2bar -a honeycomb-mcp` succeeds. That means the sign-in is done.
-5. Tell me to check that the menu bar shows a CO₂ value in ppm. Tell me to click it and turn on "Launch at Login".
+1. If ~/co2bar exists, run `git -C ~/co2bar pull`. If not, run `git clone https://github.com/zunkelty/co2bar.git ~/co2bar`.
+2. Run `~/co2bar/build.sh install "<BOARD_URL>"`. This builds the app, copies it to ~/Applications/CO2Bar.app, saves the board in the Keychain and starts the app.
+3. Tell me that a Honeycomb sign-in tab opens in my browser and that I must approve it. Wait until `security find-generic-password -s com.github.zunkelty.co2bar -a honeycomb-mcp` succeeds. That means the sign-in is done.
+4. Tell me to check that the menu bar shows a CO₂ value in ppm. Tell me to click it and turn on "Launch at Login".
 
 If a step fails, show me the error and stop.
 ```
